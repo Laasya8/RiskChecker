@@ -11,18 +11,19 @@ export default function DatasetExplorer() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(20);
+  const [selectedSplit, setSelectedSplit] = useState('combined');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRisk, setSelectedRisk] = useState('All');
 
   useEffect(() => {
     fetchData();
-  }, [page, limit]);
+  }, [page, limit, selectedSplit]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.getDatasetDetails(limit, page * limit);
+      const res = await api.getDatasetDetails(limit, page * limit, selectedSplit);
       setData(res);
     } catch (err) {
       console.error('Dataset fetch error:', err);
@@ -33,7 +34,9 @@ export default function DatasetExplorer() {
 
   const records = data?.records || [];
   const stats = data?.numeric_stats || {};
-  const totalRecords = data?.total_records || 1200;
+  const totalRecords = data?.total_records || 40000;
+  const trainCount = data?.train_records_count || 20000;
+  const testCount = data?.test_records_count || 20000;
 
   const filteredRecords = records.filter((r) => {
     const matchesSearch = searchQuery === '' || 
@@ -52,18 +55,20 @@ export default function DatasetExplorer() {
           Dataset & Data Quality Inspection
         </h2>
         <p style={{ fontSize: '12px', color: '#a1a1aa' }}>
-          Explore 1,200 multi-domain historical benchmark cases, missing value audits, and IQR outlier statistics
+          Real-world multi-domain benchmark telemetry: 20,000 Training cases + 20,000 Testing cases derived from official National Vulnerability Database (NVD/CVSS) records.
         </p>
       </div>
 
       {/* Stats Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
         <div className="clean-box" style={{ padding: '16px' }}>
-          <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase' }}>Volume</span>
+          <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase' }}>Current View</span>
           <div style={{ fontSize: '18px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#f4f4f5', marginTop: '2px' }}>
             {totalRecords.toLocaleString()} Cases
           </div>
-          <span style={{ fontSize: '11px', color: '#a1a1aa' }}>8 Domain Categories</span>
+          <span style={{ fontSize: '11px', color: '#a1a1aa' }}>
+            {selectedSplit === 'combined' ? 'Combined (40k Total)' : selectedSplit === 'train' ? 'Training Split (20k)' : 'Testing Split (20k)'}
+          </span>
         </div>
 
         <div className="clean-box" style={{ padding: '16px' }}>
@@ -141,6 +146,19 @@ export default function DatasetExplorer() {
           </h4>
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <select
+              value={selectedSplit}
+              onChange={(e) => {
+                setSelectedSplit(e.target.value);
+                setPage(0);
+              }}
+              style={{ backgroundColor: '#18181b', border: '1px solid #3f3f46', padding: '4px 8px', borderRadius: '5px', color: '#60a5fa', fontSize: '12px', fontWeight: 500 }}
+            >
+              <option value="combined">Dataset: All (40,000)</option>
+              <option value="train">Dataset: Training (20,000)</option>
+              <option value="test">Dataset: Testing (20,000)</option>
+            </select>
+
             <div style={{
               display: 'flex',
               alignItems: 'center',

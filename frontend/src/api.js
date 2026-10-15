@@ -50,7 +50,7 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(params),
   }),
-  getDatasetDetails: (limit = 50, offset = 0) => fetchApi(`/dataset?limit=${limit}&offset=${offset}`),
+  getDatasetDetails: (limit = 50, offset = 0, split = 'combined') => fetchApi(`/dataset?limit=${limit}&offset=${offset}&split=${split}`),
   getDecisionBoundary: (feat1 = 'Severity', feat2 = 'Impact') => fetchApi(`/decision-boundary?feat1=${feat1}&feat2=${feat2}`),
   getHistory: (limit = 100) => fetchApi(`/history?limit=${limit}`),
   saveHistory: (payload) => fetchApi('/history', {
