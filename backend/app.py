@@ -263,12 +263,18 @@ def retrain_models(config: RetrainRequest):
         raise HTTPException(status_code=500, detail=f"Retraining failed: {str(e)}")
 
 @app.get("/api/dataset")
-def get_dataset_details(limit: int = 50, offset: int = 0):
-    """Returns dataset summary, missing value stats, outlier counts, and paginated records (FR-07)."""
+def get_dataset_details(limit: int = 50, offset: int = 0, split: str = "combined"):
+    """Returns dataset summary, missing value stats, outlier counts, and paginated records for train, test, or combined sets (FR-07)."""
     if not manager.is_initialized:
         manager.initialize()
         
-    df = manager.raw_df
+    if split == "train" and manager.train_df is not None:
+        df = manager.train_df
+    elif split == "test" and manager.test_df is not None:
+        df = manager.test_df
+    else:
+        df = manager.raw_df
+        
     num_cols = list(NUMERIC_FEATURES.keys())
     
     # Missing value info
@@ -303,7 +309,10 @@ def get_dataset_details(limit: int = 50, offset: int = 0):
     paged_records = df.iloc[offset:offset+limit].to_dict(orient="records")
     
     return {
+        "split": split,
         "total_records": len(df),
+        "train_records_count": len(manager.train_df) if manager.train_df is not None else 0,
+        "test_records_count": len(manager.test_df) if manager.test_df is not None else 0,
         "limit": limit,
         "offset": offset,
         "columns": df.columns.tolist(),
@@ -381,6 +390,6 @@ if os.path.exists(FRONTEND_DIST):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    host = os.environ.get("HOST", "0.0.0.0")
+    host = os.environ.get("HOST", "127.0.0.1")
     print(f"Starting Unified Risk DSS Server on http://{host}:{port}")
     uvicorn.run("app:app", host=host, port=port, reload=True)

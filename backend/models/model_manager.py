@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional, List
 from sklearn.model_selection import train_test_split
 import joblib
 
-from config import DATASET_PATH, MODELS_CACHE_DIR, RANDOM_SEED, TARGET_CLASSES, RISK_CATEGORIES, NUMERIC_FEATURES
+from config import DATASET_PATH, TRAIN_DATASET_PATH, TEST_DATASET_PATH, MODELS_CACHE_DIR, RANDOM_SEED, TARGET_CLASSES, RISK_CATEGORIES, NUMERIC_FEATURES
 from preprocessing.pipeline import PreprocessingPipeline
 from preprocessing.validation import validate_risk_input, ValidationError
 from models.knn_model import KNNRiskClassifier
@@ -41,27 +41,30 @@ class ModelManager:
         """
         Loads dataset, runs full preprocessing, trains KNN, SVM, Decision Tree,
         performs K-Fold Cross Validation, evaluates all models and determines the best model.
+        Supports dedicated train (20k) and test (20k) datasets when available.
         """
-        if not os.path.exists(dataset_path):
-            raise FileNotFoundError(f"Dataset not found at {dataset_path}")
+        if os.path.exists(TRAIN_DATASET_PATH) and os.path.exists(TEST_DATASET_PATH) and (dataset_path == DATASET_PATH or dataset_path == TRAIN_DATASET_PATH):
+            self.train_df = pd.read_csv(TRAIN_DATASET_PATH)
+            self.test_df = pd.read_csv(TEST_DATASET_PATH)
+            self.raw_df = pd.concat([self.train_df, self.test_df], ignore_index=True)
+        else:
+            if not os.path.exists(dataset_path):
+                raise FileNotFoundError(f"Dataset not found at {dataset_path}")
+            self.raw_df = pd.read_csv(dataset_path)
+            train_df, test_df = train_test_split(
+                self.raw_df, 
+                test_size=0.20, 
+                random_state=RANDOM_SEED, 
+                stratify=self.raw_df["Risk_Level"]
+            )
+            self.train_df = train_df.reset_index(drop=True)
+            self.test_df = test_df.reset_index(drop=True)
             
-        self.raw_df = pd.read_csv(dataset_path)
-        
         # 1. Initialize & Fit Preprocessing Pipeline
         self.pipeline = PreprocessingPipeline(
             imputation_strategy=imputation,
             outlier_strategy=outlier_strategy
         )
-        
-        # Split into Train and Test sets (80% / 20% stratified)
-        train_df, test_df = train_test_split(
-            self.raw_df, 
-            test_size=0.20, 
-            random_state=RANDOM_SEED, 
-            stratify=self.raw_df["Risk_Level"]
-        )
-        self.train_df = train_df.reset_index(drop=True)
-        self.test_df = test_df.reset_index(drop=True)
         
         # Fit pipeline on training data to prevent data leakage (NFR-04)
         self.pipeline.fit(self.train_df)

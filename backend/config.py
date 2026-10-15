@@ -12,6 +12,8 @@ else:
     DB_PATH = os.path.join(BASE_DIR, "risk_assessment.db")
 
 DATASET_PATH = os.path.join(DATA_DIR, "historical_risk_dataset.csv")
+TRAIN_DATASET_PATH = os.path.join(DATA_DIR, "train_risk_dataset.csv")
+TEST_DATASET_PATH = os.path.join(DATA_DIR, "test_risk_dataset.csv")
 
 # Ensure directories exist
 os.makedirs(DATA_DIR, exist_ok=True)
